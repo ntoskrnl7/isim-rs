@@ -1,6 +1,6 @@
 {
   "name": "isim",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "",
   "main": "./lib/index.cjs",
   "scripts": {
@@ -17,7 +17,7 @@
     "release": "gh workflow run release.yml -f dryrun=false -f version=patch",
     "dryrun": "gh workflow run publish.yml -f dryrun=true"
   },
-  "author": "jungkwang.lee@softcamp.co.kr",
+  "author": "ntoskrnl7@gmail.com",
   "license": "ISC",
   "exports": {
     ".": {

@@ -78,6 +78,9 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ inputs.ref }}
+      - name: Install dependencies (Ubuntu only)
+        if: ${{ matrix.cfg.os == 'ubuntu-latest' }}
+        run: sudo apt-get update && sudo apt-get install -y xdotool libxtst6 libxinerama1
       - name: Setup Neon Environment
         id: neon
         uses: ./.github/actions/setup
@@ -96,7 +99,7 @@ jobs:
         env:
           CARGO_BUILD_TARGET: ${{ steps.neon.outputs.target }}
           NEON_BUILD_PLATFORM: ${{ matrix.cfg.platform }}
-        run: sudo apt install -y libxdo-dev && npm run ${{ matrix.cfg.script }}
+        run: npm run ${{ matrix.cfg.script }}
       - name: Pack
         id: pack
         shell: bash
