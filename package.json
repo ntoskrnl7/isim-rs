@@ -32,9 +32,6 @@
     }
   },
   "types": "./lib/index.d.cts",
-  "files": [
-    "lib/**/*.?({c,m}){t,j}s"
-  ],
   "neon": {
     "type": "library",
     "org": "@isim",
