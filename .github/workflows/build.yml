@@ -80,7 +80,7 @@ jobs:
           ref: ${{ inputs.ref }}
       - name: Install dependencies (Ubuntu only)
         if: ${{ matrix.cfg.os == 'ubuntu-latest' }}
-        run: sudo apt-get update && sudo apt-get install -y xdotool libxtst6 libxinerama1
+        run: sudo apt-get update && sudo apt-get install -y libxdo-dev
       - name: Setup Neon Environment
         id: neon
         uses: ./.github/actions/setup
