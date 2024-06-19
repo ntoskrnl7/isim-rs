@@ -93,7 +93,7 @@ jobs:
         run: |
           git config --global user.name $ACTIONS_USER
           git config --global user.email $ACTIONS_EMAIL
-          npm version ${{ inputs.version }} -m "v%s"
+          npm version ${{ inputs.version }} --allow-same-version -m "v%s"
       - name: Build
         shell: bash
         env:
