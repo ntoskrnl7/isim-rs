@@ -1,5 +1,5 @@
 {
-  "name": "@isim/linux-x64-gnu",
+  "name": "isim-linux-x64-gnu",
   "description": "Prebuilt binary package for `isim` on `linux-x64-gnu`.",
   "version": "0.1.4",
   "os": [

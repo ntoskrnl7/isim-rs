@@ -1,5 +1,5 @@
 {
-  "name": "@isim/darwin-x64",
+  "name": "isim-darwin-x64",
   "description": "Prebuilt binary package for `isim` on `darwin-x64`.",
   "version": "0.1.4",
   "os": [
