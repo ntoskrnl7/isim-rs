@@ -60,7 +60,7 @@ jobs:
               return { os: "windows-latest", platform, script: "build" };
             });
             const linux = platforms.Linux.map(platform => {
-              return { os: "ubuntu-latest", platform, script: "cross" };
+              return { os: "ubuntu-latest", platform, script: "build" };
             });
             return [...linux];
 
