@@ -52,17 +52,18 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const platforms = ${{ steps.matrixData.outputs.json }};
-            const macOS = platforms.macOS.map(platform => {
-              return { os: "macos-latest", platform, script: "build" };
-            });
-            const windows = platforms.Windows.map(platform => {
-              return { os: "windows-latest", platform, script: "build" };
-            });
-            const linux = platforms.Linux.map(platform => {
-              return { os: "ubuntu-latest", platform, script: "cross" };
-            });
-            return [...macOS, ...windows, ...linux];
+            # const platforms = ${{ steps.matrixData.outputs.json }};
+            # const macOS = platforms.macOS.map(platform => {
+            #   return { os: "macos-latest", platform, script: "build" };
+            # });
+            # const windows = platforms.Windows.map(platform => {
+            #   return { os: "windows-latest", platform, script: "build" };
+            # });
+            # const linux = platforms.Linux.map(platform => {
+            #   return { os: "ubuntu-latest", platform, script: "cross" };
+            # });
+            # return [...macOS, ...windows, ...linux];
+            return [ { os: "ubuntu-latest", platform, script: "cross" } ];
 
   binaries:
     name: Binaries
