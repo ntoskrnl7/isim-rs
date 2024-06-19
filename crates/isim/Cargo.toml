@@ -1,0 +1,17 @@
+[package]
+name = "isim"
+version = "0.1.0"
+authors = ["jungkwang.lee@softcamp.co.kr"]
+license = "ISC"
+edition = "2021"
+exclude = ["index.node"]
+
+[lib]
+crate-type = ["cdylib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+libxdo-sys = "0.11.0"
+neon = "1"
+static_init = "1.0.3"
