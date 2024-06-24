@@ -47,6 +47,12 @@ export class Window {
     return addon.clickWindow(button, this.id, this.display.name);
   }
 
+  async focus() {
+    if (this.id) {
+      return await addon.focusWindow(this.id, this.display.name);
+    }
+  }
+
   async activate() {
     if (this.id) {
       return await addon.activateWindow(this.id, this.display.name);
@@ -82,7 +88,15 @@ export class Display {
     return new Screen();
   }
 
+  get focusedWindow() {
+    return new Window(addon.getFocusedWindow(this.name), this);
+  }
+
   get activeWindow() {
+    return new Window(addon.getActiveWindow(this.name), this);
+  }
+
+  get currentWindow() {
     return new Window();
   }
 
@@ -117,7 +131,11 @@ declare module "./load.cjs" {
   function mouseMove(x: number, y: number, screen?: number, display?: string): Promise<number>;
 
   function clickWindow(button: number, window?: number, display?: string): number;
+  function focusWindow(window: number, display?: string): Promise<number>;
   function activateWindow(window: number, display?: string): Promise<number>;
+
+  function getFocusedWindow(display?: string): number;
+  function getActiveWindow(display?: string): number;
 }
 
 export const xdo = {

@@ -1,8 +1,9 @@
 use libxdo_sys::{
-    xdo_activate_window, xdo_click_window, xdo_free, xdo_get_mouse_location, xdo_mouse_down,
-    xdo_mouse_up, xdo_move_mouse, xdo_move_mouse_relative, xdo_move_mouse_relative_to_window,
-    xdo_new, xdo_send_keysequence_window, xdo_send_keysequence_window_down,
-    xdo_send_keysequence_window_up, xdo_wait_for_mouse_move_from, xdo_wait_for_window_active,
+    xdo_activate_window, xdo_click_window, xdo_focus_window, xdo_free, xdo_get_active_window,
+    xdo_get_focused_window, xdo_get_mouse_location, xdo_mouse_down, xdo_mouse_up, xdo_move_mouse,
+    xdo_move_mouse_relative, xdo_move_mouse_relative_to_window, xdo_new,
+    xdo_send_keysequence_window, xdo_send_keysequence_window_down, xdo_send_keysequence_window_up,
+    xdo_wait_for_mouse_move_from, xdo_wait_for_window_active, xdo_wait_for_window_focus,
 };
 use neon::prelude::*;
 use std::{ffi::CString, sync::Arc};
@@ -282,8 +283,8 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
 
     cx.export_function("clickWindow", |mut cx| {
         let button: Handle<JsNumber> = cx.argument(0)?;
-        let window = cx.argument_opt(2);
-        let display = cx.argument_opt(1);
+        let window = cx.argument_opt(1);
+        let display = cx.argument_opt(2);
 
         let button = button.value(&mut cx);
 
@@ -329,6 +330,50 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
             .promise(move |mut cx, _| Ok(cx.number(ret)));
 
         Ok(promise)
+    })?;
+
+    cx.export_function("focusWindow", |mut cx| {
+        let window_id: Handle<JsNumber> = cx.argument(0)?;
+        let display = cx.argument_opt(1);
+        let window_id = window_id.value(&mut cx);
+
+        let xdo = Arc::new(display_to_xdo!(display, cx));
+
+        let ret = unsafe { xdo_focus_window(xdo.0, window_id as _) };
+
+        let promise = cx
+            .task(move || unsafe {
+                xdo_wait_for_window_focus(xdo.0, window_id as _, 1);
+            })
+            .promise(move |mut cx, _| Ok(cx.number(ret)));
+
+        Ok(promise)
+    })?;
+
+    cx.export_function("getFocusedWindow", |mut cx| {
+        let display = cx.argument_opt(0);
+
+        let xdo = Arc::new(display_to_xdo!(display, cx));
+
+        let mut window = 0;
+        let ret = unsafe { xdo_get_focused_window(xdo.0, &mut window) };
+        if ret != 0 {
+            return cx.throw_error(format!("failed to focused window : ({})", ret));
+        }
+        Ok(cx.number(window as f64))
+    })?;
+
+    cx.export_function("getActiveWindow", |mut cx| {
+        let display = cx.argument_opt(0);
+
+        let xdo = Arc::new(display_to_xdo!(display, cx));
+        
+        let mut window = 0;
+        let ret = unsafe { xdo_get_active_window(xdo.0, &mut window) };
+        if ret != 0 {
+            return cx.throw_error(format!("failed to active window : ({})", ret));
+        }
+        Ok(cx.number(window as f64))
     })?;
 
     Ok(())
