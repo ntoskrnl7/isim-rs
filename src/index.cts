@@ -43,8 +43,8 @@ export class Window {
     }
   }
 
-  async focus() {
-
+  click(button: number) {
+    return addon.clickWindow(button, this.id, this.display.name);
   }
 
   async activate() {
@@ -116,6 +116,7 @@ declare module "./load.cjs" {
   function mouseMoveRelative(x: number, y: number, display?: string): Promise<number>;
   function mouseMove(x: number, y: number, screen?: number, display?: string): Promise<number>;
 
+  function clickWindow(button: number, window?: number, display?: string): number;
   function activateWindow(window: number, display?: string): Promise<number>;
 }
 
