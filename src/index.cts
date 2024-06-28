@@ -43,6 +43,12 @@ export class Window {
     }
   }
 
+  get pid() {
+    if (this.id) {
+      return addon.getPIDWindow(this.id, this.display.name);
+    }
+  }
+
   click(button: number) {
     return addon.clickWindow(button, this.id, this.display.name);
   }
@@ -56,6 +62,12 @@ export class Window {
   async activate() {
     if (this.id) {
       return await addon.activateWindow(this.id, this.display.name);
+    }
+  }
+
+  kill() {
+    if (this.id) {
+      return addon.killWindow(this.id, this.display.name);
     }
   }
 };
@@ -82,6 +94,10 @@ export class Display {
   public readonly name?: string;
   constructor(name?: string) {
     this.name = name;
+  }
+
+  get windowAtMouse() {
+    return new Window(addon.getWindowAtMouse(this.name), this);
   }
 
   get currentScreen() {
@@ -133,9 +149,13 @@ declare module "./load.cjs" {
   function clickWindow(button: number, window?: number, display?: string): number;
   function focusWindow(window: number, display?: string): Promise<number>;
   function activateWindow(window: number, display?: string): Promise<number>;
+  function killWindow(window: number, display?: string): Promise<number>;
+  function getPIDWindow(window: number, display?: string): number;
 
   function getFocusedWindow(display?: string): number;
   function getActiveWindow(display?: string): number;
+
+  function getWindowAtMouse(display?: string): number;
 }
 
 export const xdo = {
