@@ -53,6 +53,18 @@ export class Window {
     return addon.clickWindow(button, this.id, this.display.name);
   }
 
+  reparent(parent: Window) {
+    if (this.id && parent.id) {
+      addon.reparentWindow(this.id, parent.id, this.display.name);
+    }
+  }
+
+  raise() {
+    if (this.id) {
+      return addon.raiseWindow(this.id, this.display.name);
+    }
+  }
+
   async focus() {
     if (this.id) {
       return await addon.focusWindow(this.id, this.display.name);
@@ -149,8 +161,10 @@ declare module "./load.cjs" {
   function clickWindow(button: number, window?: number, display?: string): number;
   function focusWindow(window: number, display?: string): Promise<number>;
   function activateWindow(window: number, display?: string): Promise<number>;
+  function raiseWindow(window: number, display?: string): Promise<number>;
   function killWindow(window: number, display?: string): Promise<number>;
   function getPIDWindow(window: number, display?: string): number;
+  function reparentWindow(window: number, parent: number, display?: string): number;
 
   function getFocusedWindow(display?: string): number;
   function getActiveWindow(display?: string): number;
