@@ -1,9 +1,11 @@
 use libxdo_sys::{
     xdo_activate_window, xdo_click_window, xdo_focus_window, xdo_free, xdo_get_active_window,
-    xdo_get_focused_window, xdo_get_mouse_location, xdo_mouse_down, xdo_mouse_up, xdo_move_mouse,
-    xdo_move_mouse_relative, xdo_move_mouse_relative_to_window, xdo_new,
-    xdo_send_keysequence_window, xdo_send_keysequence_window_down, xdo_send_keysequence_window_up,
-    xdo_wait_for_mouse_move_from, xdo_wait_for_window_active, xdo_wait_for_window_focus,
+    xdo_get_current_desktop, xdo_get_desktop_for_window, xdo_get_focused_window,
+    xdo_get_mouse_location, xdo_get_pid_window, xdo_get_window_at_mouse, xdo_get_window_name,
+    xdo_kill_window, xdo_mouse_down, xdo_mouse_up, xdo_move_mouse, xdo_move_mouse_relative,
+    xdo_move_mouse_relative_to_window, xdo_new, xdo_reparent_window, xdo_send_keysequence_window,
+    xdo_send_keysequence_window_down, xdo_send_keysequence_window_up, xdo_wait_for_mouse_move_from,
+    xdo_wait_for_window_active, xdo_wait_for_window_focus,
 };
 use neon::prelude::*;
 use std::{ffi::CString, sync::Arc};
@@ -350,6 +352,46 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         Ok(promise)
     })?;
 
+    cx.export_function("killWindow", |mut cx| {
+        let window_id: Handle<JsNumber> = cx.argument(0)?;
+        let display = cx.argument_opt(1);
+        let window_id = window_id.value(&mut cx);
+
+        let xdo = Arc::new(display_to_xdo!(display, cx));
+
+        let ret = unsafe { xdo_kill_window(xdo.0, window_id as _) };
+
+        Ok(cx.number(ret))
+    })?;
+
+    cx.export_function("getPIDWindow", |mut cx| {
+        let window_id: Handle<JsNumber> = cx.argument(0)?;
+        let display = cx.argument_opt(1);
+        let window_id = window_id.value(&mut cx);
+
+        let xdo = Arc::new(display_to_xdo!(display, cx));
+
+        let ret = unsafe { xdo_get_pid_window(xdo.0, window_id as _) };
+
+        if (ret == -1) {
+            return cx.throw_error(format!("invalid pid : ({})", ret));
+        }
+        Ok(cx.number(ret))
+    })?;
+
+    cx.export_function("getWindowAtMouse", |mut cx| {
+        let display = cx.argument_opt(0);
+
+        let xdo = Arc::new(display_to_xdo!(display, cx));
+
+        let mut window = 0;
+        let ret = unsafe { xdo_get_window_at_mouse(xdo.0, &mut window) };
+        if ret != 0 {
+            return cx.throw_error(format!("failed to get window at mouse : ({})", ret));
+        }
+        Ok(cx.number(window as f64))
+    })?;
+
     cx.export_function("getFocusedWindow", |mut cx| {
         let display = cx.argument_opt(0);
 
@@ -367,7 +409,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         let display = cx.argument_opt(0);
 
         let xdo = Arc::new(display_to_xdo!(display, cx));
-        
+
         let mut window = 0;
         let ret = unsafe { xdo_get_active_window(xdo.0, &mut window) };
         if ret != 0 {
