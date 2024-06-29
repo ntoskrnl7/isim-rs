@@ -82,6 +82,12 @@ export class Window {
       return addon.killWindow(this.id, this.display.name);
     }
   }
+
+  close() {
+    if (this.id) {
+      return addon.closeWindow(this.id, this.display.name);
+    }
+  }
 };
 
 export class Screen {
@@ -162,6 +168,7 @@ declare module "./load.cjs" {
   function focusWindow(window: number, display?: string): Promise<number>;
   function activateWindow(window: number, display?: string): Promise<number>;
   function raiseWindow(window: number, display?: string): Promise<number>;
+  function closeWindow(window: number, display?: string): Promise<number>;
   function killWindow(window: number, display?: string): Promise<number>;
   function getPIDWindow(window: number, display?: string): number;
   function reparentWindow(window: number, parent: number, display?: string): number;
