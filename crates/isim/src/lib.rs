@@ -6,6 +6,13 @@ use libxdo_sys::{
     xdo_send_keysequence_window, xdo_send_keysequence_window_down, xdo_send_keysequence_window_up,
     xdo_wait_for_mouse_move_from, xdo_wait_for_window_active, xdo_wait_for_window_focus,
 };
+extern "C" {
+    pub fn xdo_close_window(
+        xdo: *const libxdo_sys::xdo_t,
+        winidow: std::ffi::c_ulong,
+    ) -> std::ffi::c_int;
+}
+
 use neon::prelude::*;
 use std::{ffi::CString, sync::Arc};
 
@@ -373,6 +380,18 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         let xdo = Arc::new(display_to_xdo!(display, cx));
 
         let ret = unsafe { xdo_reparent_window(xdo.0, window_id as _, parent_id as _) };
+
+        Ok(cx.number(ret))
+    })?;
+
+    cx.export_function("closeWindow", |mut cx| {
+        let window_id: Handle<JsNumber> = cx.argument(0)?;
+        let display = cx.argument_opt(1);
+        let window_id = window_id.value(&mut cx);
+
+        let xdo = Arc::new(display_to_xdo!(display, cx));
+
+        let ret = unsafe { xdo_close_window(xdo.0, window_id as _) };
 
         Ok(cx.number(ret))
     })?;
