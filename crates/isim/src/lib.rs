@@ -370,7 +370,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         Ok(cx.number(ret))
     })?;
 
-    cx.export_function("raiseWindow", |mut cx| {
+    cx.export_function("reparentWindow", |mut cx| {
         let window_id: Handle<JsNumber> = cx.argument(0)?;
         let parent_id: Handle<JsNumber> = cx.argument(1)?;
         let display = cx.argument_opt(2);
