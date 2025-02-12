@@ -1,4 +1,4 @@
-# isim
+# isim-rs
 
 This project was bootstrapped by [create-neon](https://www.npmjs.com/package/create-neon).
 
@@ -10,7 +10,7 @@ To run the build, run:
 
 ```sh
 sudo apt install libxdo-dev
-sudo apt install pkgconf
+sudo apt install pkgconfig
 sudo apt install libxfixes-dev
 $ npm run build
 ```
