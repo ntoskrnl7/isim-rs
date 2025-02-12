@@ -164,6 +164,9 @@ declare module "./load.cjs" {
   function mouseMoveRelative(x: number, y: number, display?: string): Promise<number>;
   function mouseMove(x: number, y: number, screen?: number, display?: string): Promise<number>;
 
+  function hideCursor(window?: number): number;
+  function showCurosr(window?: number): void;
+
   function clickWindow(button: number, window?: number, display?: string): number;
   function focusWindow(window: number, display?: string): Promise<number>;
   function activateWindow(window: number, display?: string): Promise<number>;
@@ -175,6 +178,7 @@ declare module "./load.cjs" {
 
   function getFocusedWindow(display?: string): number;
   function getActiveWindow(display?: string): number;
+  function getRootWindow(display?: string): number;
 
   function getWindowAtMouse(display?: string): number;
 }

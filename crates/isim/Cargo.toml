@@ -1,6 +1,6 @@
 [package]
 name = "isim"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["ntoskrnl7@gmail.com"]
 license = "ISC"
 edition = "2021"
@@ -15,3 +15,4 @@ crate-type = ["cdylib"]
 libxdo-sys = "0.11.0"
 neon = "1"
 static_init = "1.0.3"
+x11 = { version = "2.21.0", features = ["xlib", "xfixes"] }

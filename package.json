@@ -1,6 +1,6 @@
 {
   "name": "isim",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "",
   "main": "./lib/index.cjs",
   "scripts": {
@@ -42,12 +42,12 @@
     "load": "./src/load.cts"
   },
   "devDependencies": {
-    "@neon-rs/cli": "^0.1.73",
+    "@neon-rs/cli": "^0.1.82",
     "@tsconfig/node20": "^20.1.4",
-    "@types/node": "^20.11.16",
-    "typescript": "^5.3.3"
+    "@types/node": "^22.13.1",
+    "typescript": "^5.7.3"
   },
   "dependencies": {
-    "@neon-rs/load": "^0.1.73"
+    "@neon-rs/load": "^0.1.82"
   }
 }

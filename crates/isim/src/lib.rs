@@ -13,35 +13,54 @@ extern "C" {
     ) -> std::ffi::c_int;
 }
 
+use static_init::dynamic;
+use x11::xfixes::XFixesHideCursor;
+use x11::xfixes::XFixesShowCursor;
+use x11::xlib::XDefaultRootWindow;
+use x11::xlib::XSync;
+
 use neon::prelude::*;
 use std::{ffi::CString, sync::Arc};
 
-struct Xdo(*mut libxdo_sys::xdo_t);
+struct Xdo {
+    ptr: *mut libxdo_sys::xdo_t,
+    permanent: bool,
+}
 
 unsafe impl Send for Xdo {}
 unsafe impl Sync for Xdo {}
 
 impl Drop for Xdo {
     fn drop(&mut self) {
-        if !self.0.is_null() {
+        if !self.permanent && !self.ptr.is_null() {
             unsafe {
-                xdo_free(self.0);
+                println!("terminated");
+                xdo_free(self.ptr);
             }
         }
     }
 }
 
+#[dynamic(drop)]
+static mut DEFAULT_XDO: Xdo = Xdo {
+    ptr: unsafe { xdo_new(std::ptr::null()) },
+    permanent: false,
+};
+
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
     macro_rules! display_to_xdo {
         ($display:expr, $cx:expr) => {
-            Xdo(unsafe {
+            unsafe {
                 match $display {
                     Some(display) => {
                         if display.is_a::<JsUndefined, _>(&mut $cx)
                             || display.is_a::<JsNull, _>(&mut $cx)
                         {
-                            xdo_new(std::ptr::null())
+                            Xdo {
+                                ptr: DEFAULT_XDO.read().ptr,
+                                permanent: true,
+                            }
                         } else {
                             let display = display
                                 .downcast_or_throw::<JsString, _>(&mut $cx)?
@@ -52,17 +71,23 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
                                     return $cx.throw_error(err.to_string());
                                 }
                             };
-                            let xdo = xdo_new(display.as_ptr() as _);
-                            if xdo.is_null() {
+                            let ptr = xdo_new(display.as_ptr() as _);
+                            if ptr.is_null() {
                                 return $cx
                                     .throw_error(format!("Can't open display: {:?}", display));
                             }
-                            xdo
+                            Xdo {
+                                ptr,
+                                permanent: false,
+                            }
                         }
                     }
-                    None => xdo_new(std::ptr::null()),
+                    None => Xdo {
+                        ptr: DEFAULT_XDO.read().ptr,
+                        permanent: true,
+                    },
                 }
-            })
+            }
         };
     }
 
@@ -101,7 +126,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
                     None => 0,
                 };
 
-                Ok(cx.number(unsafe { $xdo_key_fn(xdo.0, window, key_seq.as_ptr(), delay) }))
+                Ok(cx.number(unsafe { $xdo_key_fn(xdo.ptr, window, key_seq.as_ptr(), delay) }))
             })?;
         };
     }
@@ -132,7 +157,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
 
                 let xdo = display_to_xdo!(display, cx);
 
-                Ok(cx.number(unsafe { $xdo_fn(xdo.0, window, button as _) }))
+                Ok(cx.number(unsafe { $xdo_fn(xdo.ptr, window, button as _) }))
             })?;
         };
     }
@@ -143,6 +168,46 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
 
     register_mouse_event!(mouseDown, xdo_mouse_down);
     register_mouse_event!(mouseUp, xdo_mouse_up);
+
+    cx.export_function("hideCursor", |mut cx| unsafe {
+        let display = DEFAULT_XDO.read().ptr.read().xdpy;
+        let window = cx.argument_opt(0);
+        let window = match window {
+            Some(window) => {
+                if window.is_a::<JsUndefined, _>(&mut cx) || window.is_a::<JsNull, _>(&mut cx) {
+                    XDefaultRootWindow(display)
+                } else {
+                    window
+                        .downcast_or_throw::<JsNumber, _>(&mut cx)?
+                        .value(&mut cx) as _
+                }
+            }
+            None => XDefaultRootWindow(display),
+        };
+        XFixesHideCursor(display, window);
+        XSync(display, 1);
+        Ok(cx.undefined())
+    })?;
+
+    cx.export_function("showCursor", |mut cx| unsafe {
+        let display = DEFAULT_XDO.read().ptr.read().xdpy;
+        let window = cx.argument_opt(0);
+        let window = match window {
+            Some(window) => {
+                if window.is_a::<JsUndefined, _>(&mut cx) || window.is_a::<JsNull, _>(&mut cx) {
+                    XDefaultRootWindow(display)
+                } else {
+                    window
+                        .downcast_or_throw::<JsNumber, _>(&mut cx)?
+                        .value(&mut cx) as _
+                }
+            }
+            None => XDefaultRootWindow(display),
+        };
+        XFixesShowCursor(display, window);
+        XSync(display, 1);
+        Ok(cx.undefined())
+    })?;
 
     cx.export_function("mouseMoveRelativeToWindow", |mut cx| {
         let x: Handle<JsNumber> = cx.argument(0)?;
@@ -174,7 +239,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         let mut origin_y = 0;
         let mut origin_screen = 0;
         let ret = unsafe {
-            xdo_get_mouse_location(xdo.0, &mut origin_x, &mut origin_y, &mut origin_screen)
+            xdo_get_mouse_location(xdo.ptr, &mut origin_x, &mut origin_y, &mut origin_screen)
         };
         if ret != 0 {
             return cx.throw_error(format!("failed to xdo_get_mouse_location : {}", ret));
@@ -182,7 +247,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
 
         let ret = unsafe {
             xdo_move_mouse_relative_to_window(
-                xdo.0,
+                xdo.ptr,
                 window.unwrap_or(libxdo_sys::CURRENTWINDOW),
                 x as _,
                 y as _,
@@ -196,7 +261,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         }
 
         let promise = cx
-            .task(move || unsafe { xdo_wait_for_mouse_move_from(xdo.0, origin_x, origin_y) })
+            .task(move || unsafe { xdo_wait_for_mouse_move_from(xdo.ptr, origin_x, origin_y) })
             .promise(move |mut cx, _| Ok(cx.number(ret)));
 
         Ok(promise)
@@ -216,13 +281,13 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         let mut origin_y = 0;
         let mut origin_screen = 0;
         let ret = unsafe {
-            xdo_get_mouse_location(xdo.0, &mut origin_x, &mut origin_y, &mut origin_screen)
+            xdo_get_mouse_location(xdo.ptr, &mut origin_x, &mut origin_y, &mut origin_screen)
         };
         if ret != 0 {
             return cx.throw_error(format!("failed to xdo_get_mouse_location : {}", ret));
         }
 
-        let ret = unsafe { xdo_move_mouse_relative(xdo.0, x as _, y as _) };
+        let ret = unsafe { xdo_move_mouse_relative(xdo.ptr, x as _, y as _) };
         if ret != 0 {
             return cx.throw_error(format!(
                 "failed to xdo_move_mouse_relative_to_window : {}",
@@ -231,7 +296,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         }
 
         let promise = cx
-            .task(move || unsafe { xdo_wait_for_mouse_move_from(xdo.0, origin_x, origin_y) })
+            .task(move || unsafe { xdo_wait_for_mouse_move_from(xdo.ptr, origin_x, origin_y) })
             .promise(move |mut cx, _| Ok(cx.number(ret)));
 
         Ok(promise)
@@ -268,13 +333,13 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         let mut origin_y = 0;
         let mut origin_screen = 0;
         let ret = unsafe {
-            xdo_get_mouse_location(xdo.0, &mut origin_x, &mut origin_y, &mut origin_screen)
+            xdo_get_mouse_location(xdo.ptr, &mut origin_x, &mut origin_y, &mut origin_screen)
         };
         if ret != 0 {
             return cx.throw_error(format!("failed to xdo_get_mouse_location : {}", ret));
         }
 
-        let ret = unsafe { xdo_move_mouse(xdo.0, x as _, y as _, screen) };
+        let ret = unsafe { xdo_move_mouse(xdo.ptr, x as _, y as _, screen) };
         if ret != 0 {
             return cx.throw_error(format!(
                 "failed to xdo_move_mouse_relative_to_window : {}",
@@ -283,7 +348,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         }
 
         let promise = cx
-            .task(move || unsafe { xdo_wait_for_mouse_move_from(xdo.0, origin_x, origin_y) })
+            .task(move || unsafe { xdo_wait_for_mouse_move_from(xdo.ptr, origin_x, origin_y) })
             .promise(move |mut cx, _| Ok(cx.number(ret)));
 
         Ok(promise)
@@ -311,11 +376,15 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
             None => None,
         };
 
-        let xdo = Arc::new(display_to_xdo!(display, cx));
+        let xdo = if display.is_none() {
+            Arc::new(display_to_xdo!(display, cx))
+        } else {
+            Arc::new(display_to_xdo!(display, cx))
+        };
 
         Ok(cx.number(unsafe {
             xdo_click_window(
-                xdo.0,
+                xdo.ptr,
                 window.unwrap_or(libxdo_sys::CURRENTWINDOW),
                 button as _,
             )
@@ -329,11 +398,11 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
 
         let xdo = Arc::new(display_to_xdo!(display, cx));
 
-        let ret = unsafe { xdo_activate_window(xdo.0, window_id as _) };
+        let ret = unsafe { xdo_activate_window(xdo.ptr, window_id as _) };
 
         let promise = cx
             .task(move || unsafe {
-                xdo_wait_for_window_active(xdo.0, window_id as _, 1);
+                xdo_wait_for_window_active(xdo.ptr, window_id as _, 1);
             })
             .promise(move |mut cx, _| Ok(cx.number(ret)));
 
@@ -347,11 +416,11 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
 
         let xdo = Arc::new(display_to_xdo!(display, cx));
 
-        let ret = unsafe { xdo_focus_window(xdo.0, window_id as _) };
+        let ret = unsafe { xdo_focus_window(xdo.ptr, window_id as _) };
 
         let promise = cx
             .task(move || unsafe {
-                xdo_wait_for_window_focus(xdo.0, window_id as _, 1);
+                xdo_wait_for_window_focus(xdo.ptr, window_id as _, 1);
             })
             .promise(move |mut cx, _| Ok(cx.number(ret)));
 
@@ -365,7 +434,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
 
         let xdo = Arc::new(display_to_xdo!(display, cx));
 
-        let ret = unsafe { xdo_raise_window(xdo.0, window_id as _) };
+        let ret = unsafe { xdo_raise_window(xdo.ptr, window_id as _) };
 
         Ok(cx.number(ret))
     })?;
@@ -379,7 +448,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
 
         let xdo = Arc::new(display_to_xdo!(display, cx));
 
-        let ret = unsafe { xdo_reparent_window(xdo.0, window_id as _, parent_id as _) };
+        let ret = unsafe { xdo_reparent_window(xdo.ptr, window_id as _, parent_id as _) };
 
         Ok(cx.number(ret))
     })?;
@@ -391,7 +460,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
 
         let xdo = Arc::new(display_to_xdo!(display, cx));
 
-        let ret = unsafe { xdo_close_window(xdo.0, window_id as _) };
+        let ret = unsafe { xdo_close_window(xdo.ptr, window_id as _) };
 
         Ok(cx.number(ret))
     })?;
@@ -403,7 +472,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
 
         let xdo = Arc::new(display_to_xdo!(display, cx));
 
-        let ret = unsafe { xdo_kill_window(xdo.0, window_id as _) };
+        let ret = unsafe { xdo_kill_window(xdo.ptr, window_id as _) };
 
         Ok(cx.number(ret))
     })?;
@@ -415,7 +484,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
 
         let xdo = Arc::new(display_to_xdo!(display, cx));
 
-        let ret = unsafe { xdo_get_pid_window(xdo.0, window_id as _) };
+        let ret = unsafe { xdo_get_pid_window(xdo.ptr, window_id as _) };
 
         if ret == -1 {
             return cx.throw_error(format!("invalid pid : ({})", ret));
@@ -429,7 +498,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         let xdo = Arc::new(display_to_xdo!(display, cx));
 
         let mut window = 0;
-        let ret = unsafe { xdo_get_window_at_mouse(xdo.0, &mut window) };
+        let ret = unsafe { xdo_get_window_at_mouse(xdo.ptr, &mut window) };
         if ret != 0 {
             return cx.throw_error(format!("failed to get window at mouse : ({})", ret));
         }
@@ -442,7 +511,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         let xdo = Arc::new(display_to_xdo!(display, cx));
 
         let mut window = 0;
-        let ret = unsafe { xdo_get_focused_window(xdo.0, &mut window) };
+        let ret = unsafe { xdo_get_focused_window(xdo.ptr, &mut window) };
         if ret != 0 {
             return cx.throw_error(format!("failed to focused window : ({})", ret));
         }
@@ -455,10 +524,17 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         let xdo = Arc::new(display_to_xdo!(display, cx));
 
         let mut window = 0;
-        let ret = unsafe { xdo_get_active_window(xdo.0, &mut window) };
+        let ret = unsafe { xdo_get_active_window(xdo.ptr, &mut window) };
         if ret != 0 {
             return cx.throw_error(format!("failed to active window : ({})", ret));
         }
+        Ok(cx.number(window as f64))
+    })?;
+
+    cx.export_function("getRootWindow", |mut cx| {
+        let display = cx.argument_opt(0);
+        let xdo = Arc::new(display_to_xdo!(display, cx));
+        let window = unsafe { XDefaultRootWindow(xdo.ptr.read().xdpy) };
         Ok(cx.number(window as f64))
     })?;
 

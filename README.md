@@ -9,6 +9,9 @@ Building isim requires a [supported version of Node and Rust](https://github.com
 To run the build, run:
 
 ```sh
+sudo apt install libxdo-dev
+sudo apt install pkgconf
+sudo apt install libxfixes-dev
 $ npm run build
 ```
 
