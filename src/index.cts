@@ -119,7 +119,7 @@ export class Display {
   }
 
   get currentScreen() {
-    return new Screen();
+    return new Screen(undefined, this);
   }
 
   get focusedWindow() {
@@ -131,7 +131,7 @@ export class Display {
   }
 
   get currentWindow() {
-    return new Window();
+    return new Window(undefined, this);
   }
 
   getWindow(id: number): Window {
@@ -139,7 +139,7 @@ export class Display {
   }
 
   getScreen(id: number): Screen {
-    return new Screen(id);
+    return new Screen(id, this);
   }
 
   get mouse() {
@@ -164,15 +164,15 @@ declare module "./load.cjs" {
   function mouseMoveRelative(x: number, y: number, display?: string): Promise<number>;
   function mouseMove(x: number, y: number, screen?: number, display?: string): Promise<number>;
 
-  function hideCursor(window?: number): number;
-  function showCurosr(window?: number): void;
+  function hideCursor(window?: number): void;
+  function showCursor(window?: number): void;
 
   function clickWindow(button: number, window?: number, display?: string): number;
   function focusWindow(window: number, display?: string): Promise<number>;
   function activateWindow(window: number, display?: string): Promise<number>;
-  function raiseWindow(window: number, display?: string): Promise<number>;
-  function closeWindow(window: number, display?: string): Promise<number>;
-  function killWindow(window: number, display?: string): Promise<number>;
+  function raiseWindow(window: number, display?: string): number;
+  function closeWindow(window: number, display?: string): number;
+  function killWindow(window: number, display?: string): number;
   function getPIDWindow(window: number, display?: string): number;
   function reparentWindow(window: number, parent: number, display?: string): number;
 

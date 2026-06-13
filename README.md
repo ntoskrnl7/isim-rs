@@ -1,107 +1,148 @@
-# isim-rs
+# isim
 
-This project was bootstrapped by [create-neon](https://www.npmjs.com/package/create-neon).
+[![CI](https://github.com/ntoskrnl7/isim-rs/actions/workflows/test.yml/badge.svg)](https://github.com/ntoskrnl7/isim-rs/actions/workflows/test.yml)
+[![npm](https://img.shields.io/npm/v/isim.svg)](https://www.npmjs.com/package/isim)
 
-## Building isim
+`isim` is a small Node.js library for controlling X11 windows from JavaScript.
+It wraps the common desktop automation operations you usually reach for in
+`xdotool`: keyboard input, mouse input, window focus, activation, clicks, and
+window lookup.
 
-Building isim requires a [supported version of Node and Rust](https://github.com/neon-bindings/neon#platform-support).
+```ts
+import { currentDisplay } from 'isim';
 
-To run the build, run:
+const win = currentDisplay.activeWindow;
+
+win.raise();
+await win.focus();
+win.key.press('ctrl+l');
+await win.mouse.move(20, 10);
+win.click(1);
+```
+
+## Support
+
+`isim` currently targets Linux desktops running X11.
+
+It depends on `libxdo` and X11 libraries under the hood, so it is not a
+Wayland-native automation library. It may still work in XWayland scenarios when
+the target window is visible to X11.
+
+## Install
 
 ```sh
-sudo apt install libxdo-dev
-sudo apt install pkgconfig
-sudo apt install libxfixes-dev
-$ npm run build
+npm install isim
 ```
 
-This command uses the [@neon-rs/cli](https://www.npmjs.com/package/@neon-rs/cli) utility to assemble the binary Node addon from the output of `cargo`.
-
-## Exploring isim
-
-After building isim, you can explore its exports at the Node console:
+If npm cannot find a prebuilt binary for your platform, or if you are working
+from source, install the native Linux dependencies first:
 
 ```sh
-$ npm i
-$ npm run build
-$ node
-> require('.').greeting()
-{ message: 'hello node' }
+sudo apt-get update
+sudo apt-get install -y pkgconf libxdo-dev libxfixes-dev
 ```
 
-## Available Scripts
+Source builds also require Node.js and Rust.
 
-In the project directory, you can run:
+## Usage
 
-#### `npm run build`
+Use the default display:
 
-Builds the Node addon (`index.node`) from source, generating a release build with `cargo --release`.
+```ts
+import { currentDisplay } from 'isim';
 
-Additional [`cargo build`](https://doc.rust-lang.org/cargo/commands/cargo-build.html) arguments may be passed to `npm run build` and similar commands. For example, to enable a [cargo feature](https://doc.rust-lang.org/cargo/reference/features.html):
-
-```
-npm run build -- --feature=beetle
-```
-
-#### `npm run debug`
-
-Similar to `npm run build` but generates a debug build with `cargo`.
-
-#### `npm run cross`
-
-Similar to `npm run build` but uses [cross-rs](https://github.com/cross-rs/cross) to cross-compile for another platform. Use the [`CARGO_BUILD_TARGET`](https://doc.rust-lang.org/cargo/reference/config.html#buildtarget) environment variable to select the build target.
-
-#### `npm run release`
-
-Initiate a full build and publication of a new patch release of this library via GitHub Actions.
-
-#### `npm run dryrun`
-
-Initiate a dry run of a patch release of this library via GitHub Actions. This performs a full build but does not publish the final result.
-
-#### `npm test`
-
-Runs the unit tests by calling `cargo test`. You can learn more about [adding tests to your Rust code](https://doc.rust-lang.org/book/ch11-01-writing-tests.html) from the [Rust book](https://doc.rust-lang.org/book/).
-
-## Project Layout
-
-The directory structure of this project is:
-
-```
-isim/
-├── Cargo.toml
-├── README.md
-├── lib/
-├── src/
-|   ├── index.mts
-|   └── index.cts
-├── crates/
-|   └── isim/
-|       └── src/
-|           └── lib.rs
-├── platforms/
-├── package.json
-└── target/
+const active = currentDisplay.activeWindow;
+const focused = currentDisplay.focusedWindow;
+const underMouse = currentDisplay.windowAtMouse;
 ```
 
-| Entry          | Purpose                                                                                                                                  |
-|----------------|------------------------------------------------------------------------------------------------------------------------------------------|
-| `Cargo.toml`   | The Cargo [manifest file](https://doc.rust-lang.org/cargo/reference/manifest.html), which informs the `cargo` command.                   |
-| `README.md`    | This file.                                                                                                                               |
-| `lib/`         | The directory containing the generated output from [tsc](https://typescriptlang.org).                                                    |
-| `src/`         | The directory containing the TypeScript source files.                                                                                    |
-| `index.mts`    | Entry point for when this library is loaded via [ESM `import`](https://nodejs.org/api/esm.html#modules-ecmascript-modules) syntax.       |
-| `index.cts`    | Entry point for when this library is loaded via [CJS `require`](https://nodejs.org/api/modules.html#requireid).                          |
-| `crates/`      | The directory tree containing the Rust source code for the project.                                                                      |
-| `lib.rs`       | Entry point for the Rust source code.                                                                                                          |
-| `platforms/`   | The directory containing distributions of the binary addon backend for each platform supported by this library.                          |
-| `package.json` | The npm [manifest file](https://docs.npmjs.com/cli/v7/configuring-npm/package-json), which informs the `npm` command.                    |
-| `target/`      | Binary artifacts generated by the Rust build.                                                                                            |
+Use an explicit display:
 
-## Learn More
+```ts
+import { Display } from 'isim';
 
-Learn more about:
+const display = new Display(':0');
+const win = display.getWindow(0x3400007);
 
-- [Neon](https://neon-bindings.com).
-- [Rust](https://www.rust-lang.org).
-- [Node](https://nodejs.org).
+win.raise();
+await win.activate();
+```
+
+Send keyboard input:
+
+```ts
+const win = currentDisplay.activeWindow;
+
+await win.focus();
+win.key.press('ctrl+shift+t');
+```
+
+Send mouse input:
+
+```ts
+const win = currentDisplay.windowAtMouse;
+
+win.mouse.down(1);
+win.mouse.up(1);
+await win.mouse.move(40, 20);
+```
+
+Use the lower-level native bindings when you need direct access:
+
+```ts
+import { xdo } from 'isim';
+
+const windowId = xdo.getActiveWindow();
+xdo.keyPress('Return', windowId);
+```
+
+## API
+
+| API | Description |
+| --- | --- |
+| `new Display(name?)` | Connect to the default X display or a display such as `:0`. |
+| `display.activeWindow` | Window currently active according to the window manager. |
+| `display.focusedWindow` | Window that currently owns keyboard focus. |
+| `display.windowAtMouse` | Window under the mouse pointer. |
+| `display.currentWindow` | Wrapper for libxdo's current-window target. |
+| `display.currentScreen` | Wrapper for libxdo's current-screen target. |
+| `display.getWindow(id)` | Wrap a specific X11 window ID. |
+| `display.getScreen(id)` | Wrap a specific screen ID. |
+| `window.key.down(key)` | Press and hold a key sequence. |
+| `window.key.up(key)` | Release a key sequence. |
+| `window.key.press(key)` | Press and release a key sequence. |
+| `window.mouse.down(button)` | Press a mouse button. |
+| `window.mouse.up(button)` | Release a mouse button. |
+| `window.mouse.move(x, y)` | Move relative to the window. |
+| `window.click(button)` | Click a mouse button in the window. |
+| `window.focus()` | Focus the window and wait for focus. |
+| `window.activate()` | Activate the window and wait for activation. |
+| `window.raise()` | Raise the window. |
+| `window.close()` | Ask the window to close. |
+| `window.kill()` | Kill the window. |
+| `window.pid` | Resolve the process ID for the window. |
+| `xdo` | Raw native addon exports. |
+
+Most synchronous methods return the underlying `libxdo` status code. Methods
+that wait for X11 state changes return `Promise<number>`.
+
+## Development
+
+```sh
+npm ci
+npm run test:node
+npm run test:rust
+npm run debug
+```
+
+Useful scripts:
+
+| Command | Description |
+| --- | --- |
+| `npm run test:node` | Type-check TypeScript and run JavaScript wrapper tests. |
+| `npm run test:rust` | Run the Rust test suite. |
+| `npm test` | Run both Node and Rust tests. |
+| `npm run debug` | Build a debug native addon. |
+| `npm run build` | Build a release native addon. |
+| `npm run dryrun` | Start a dry-run release workflow. |
+| `npm run release` | Start the release workflow. |
