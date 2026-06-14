@@ -37,27 +37,36 @@ runs:
         export-variables: true
         keys-case: bypass
     - name: Install Node
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
         registry-url: ${{ env.NPM_REGISTRY }}
         cache: npm
     - name: Install Dependencies
-      shell: bash  
-      run: npm ci   
+      shell: bash
+      run: npm ci
     - name: Compute Rust Target
       if: ${{ inputs['use-rust'] == 'true' }}
       id: target
       shell: bash
-      run: echo target=$(npx neon list-platforms | jq -r '.["${{ inputs.platform }}"]') | tee -a $GITHUB_OUTPUT
+      run: |
+        if [[ -n "${{ inputs.platform }}" ]]; then
+          echo "target=$(npx neon list-platforms | jq -r '.["${{ inputs.platform }}"]')" | tee -a "$GITHUB_OUTPUT"
+        else
+          echo "target=" | tee -a "$GITHUB_OUTPUT"
+        fi
       working-directory: ${{ inputs.workspace }}
     - name: Install Rust
       if: ${{ inputs['use-rust'] == 'true' }}
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: ${{ env.RUST_VERSION }}
-        target: ${{ steps.target.outputs.target }}
-        override: true
+      shell: bash
+      run: |
+        target="${{ steps.target.outputs.target }}"
+        if [[ -n "$target" ]]; then
+          rustup toolchain install "$RUST_VERSION" --profile minimal --target "$target"
+        else
+          rustup toolchain install "$RUST_VERSION" --profile minimal
+        fi
+        rustup default "$RUST_VERSION"
     - name: Install cross-rs
       if: ${{ inputs['use-cross'] == 'true' }}
       uses: baptiste0928/cargo-install@v2

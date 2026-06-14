@@ -14,5 +14,5 @@ crate-type = ["cdylib"]
 [dependencies]
 libxdo-sys = "0.11.0"
 neon = "1"
-static_init = "1.0.3"
+static_init = "1.0.4"
 x11 = { version = "2.21.0", features = ["xlib", "xfixes"] }
