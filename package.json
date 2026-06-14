@@ -1,6 +1,6 @@
 {
   "name": "isim",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "description": "Node.js X11 automation bindings built with Rust, Neon, and libxdo.",
   "main": "./lib/index.cjs",
   "scripts": {
